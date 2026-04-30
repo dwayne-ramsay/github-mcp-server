@@ -7,7 +7,6 @@ RUN cd ui && npm ci
 
 COPY ui/ ./ui/
 
-# Create output directory and build - vite outputs directly to pkg/github/ui_dist/
 RUN mkdir -p ./pkg/github/ui_dist && \
     cd ui && npm run build
 
@@ -29,18 +28,21 @@ RUN CGO_ENABLED=0 go build \
     -o /bin/github-mcp-server ./cmd/github-mcp-server
 
 
-FROM node:20-alpine
+FROM python:3.12-alpine
 
 LABEL io.modelcontextprotocol.server.name="io.github.github/github-mcp-server"
 
 WORKDIR /server
 
-RUN apk add --no-cache ca-certificates
+RUN apk add --no-cache ca-certificates && \
+    pip install --no-cache-dir mcp-proxy
 
 COPY --from=build /bin/github-mcp-server .
 
-EXPOSE 8082
+EXPOSE 8080
 
-CMD sh -c 'npx -y supergateway \
-  --stdio "/server/github-mcp-server stdio" \
-  --port "${PORT:-8082}"'
+CMD sh -c 'mcp-proxy \
+  --host 0.0.0.0 \
+  --port "${PORT:-8080}" \
+  -- \
+  /server/github-mcp-server stdio'
