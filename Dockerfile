@@ -45,5 +45,5 @@ EXPOSE 8082
 ENTRYPOINT ["/server/github-mcp-server"]
 
 # Default arguments for ENTRYPOINT
-CMD ["/bin/sh", "-c", "/server/github-mcp-server stdio"]
+CMD ["stdio"]
 #CMD ["/bin/sh", "-c", "/server/github-mcp-server serve --transport sse --host 0.0.0.0 --port ${PORT:-8082}"]
