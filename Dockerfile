@@ -14,8 +14,7 @@ ARG VERSION="dev"
 WORKDIR /build
 
 # Install git
-RUN --mount=type=cache,target=/var/cache/apk \
-    apk add git
+RUN apk add --no-cache ca-certificates git
 
 # Copy source code (including ui_dist placeholder)
 COPY . .
@@ -24,9 +23,7 @@ COPY . .
 COPY --from=ui-build /app/pkg/github/ui_dist/* ./pkg/github/ui_dist/
 
 # Build the server
-RUN --mount=type=cache,target=/go/pkg/mod \
-    --mount=type=cache,target=/root/.cache/go-build \
-    CGO_ENABLED=0 go build -ldflags="-s -w -X main.version=${VERSION} -X main.commit=$(git rev-parse HEAD) -X main.date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+RUN CGO_ENABLED=0 go build -ldflags="-s -w -X main.version=${VERSION} -X main.commit=$(git rev-parse HEAD) -X main.date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
     -o /bin/github-mcp-server ./cmd/github-mcp-server
 
 # Make a stage to run the app
@@ -37,11 +34,16 @@ LABEL io.modelcontextprotocol.server.name="io.github.github/github-mcp-server"
 
 # Set the working directory
 WORKDIR /server
+
 # Copy the binary from the build stage
 COPY --from=build /bin/github-mcp-server .
+
 # Expose the default port
 EXPOSE 8082
+
 # Set the entrypoint to the server binary
 ENTRYPOINT ["/server/github-mcp-server"]
+
 # Default arguments for ENTRYPOINT
-CMD ["stdio"]
+CMD ["/bin/sh", "-c", "/server/github-mcp-server stdio"]
+#CMD ["/bin/sh", "-c", "/server/github-mcp-server serve --transport sse --host 0.0.0.0 --port ${PORT:-8082}"]
